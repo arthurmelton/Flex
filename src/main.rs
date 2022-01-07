@@ -65,6 +65,18 @@ fn main() {
                     let mut buffer = [0; 4096];
                     stream.read(&mut buffer).unwrap();
                     let response: String = String::from_utf8_lossy(&buffer).to_string();
+                    let mut range:(usize,usize) = (0,0);
+                    for i in response.to_lowercase().lines() {
+                        if i.starts_with("range: ") {
+                            println!("{}", i);
+                            if i.split("-").last().unwrap().len() > 0 {
+                                range=(i.split("bytes=").last().unwrap().split("-").nth(0).unwrap().parse().unwrap(), i.split("bytes=").last().unwrap().split("-").last().unwrap().parse().unwrap());
+                            }
+                            else {
+                                range=(i.split("bytes=").last().unwrap().split("-").nth(0).unwrap().parse().unwrap(),0);
+                            }
+                        }
+                    }
                     if response.split(' ').count() > 1 {
                         let wants = response.split(' ').nth(1).unwrap();
                         let file_wants = match wants {
@@ -110,9 +122,13 @@ fn main() {
                                 }
                             }
                         };
-                        println!("{} : {}", wants, file_wants);
+                        println!("{} : {}", response, file_wants);
                         let mut f = File::open(file_wants.clone()).expect("no file found");
                         let mut buffer = Vec::new();
+                        let file_length:usize = fs::metadata(file_wants.clone()).unwrap().len().try_into().unwrap();
+                        if range != (0,0) && range.1 == 0 {
+                            range = (range.0, file_length);
+                        }
                         if file_wants.ends_with(".css") {
                             for i in
                                 "HTTP/1.1 200 Ok\r\nContent-type: text/css; charset=utf-8\r\n\r\n"
@@ -125,13 +141,35 @@ fn main() {
                                 buffer.push(*i);
                             }
                         } else if wants.starts_with("/videos/") && file_wants != "404.html" {
+                            let length = if range != (0,0) {
+                                range.1-range.0
+                            }
+                            else {
+                                file_length
+                            };
+                            let code = if range != (0,0) {
+                                206
+                            }
+                            else {
+                                200
+                            };
+                            let content_rang = if range != (0,0) {
+                                format!("\r\nContent-Range: bytes {}-{}/{}",range.0,
+                                range.1,
+                                file_length)
+                            }
+                            else {
+                                "".to_string()
+                            };
                             for i in format!(
-                                "HTTP/1.1 200 Ok\r\ncontent-type: {}\r\ncontent-length: {}\r\n\r\n",
+                                "HTTP/1.1 {} Ok{}\r\nContent-Type: {}\r\nAccept-Ranges: bytes\r\nContent-Length: {}\r\n\r\n",
+                                code,
+                                content_rang,
                                 infer::get_from_path(file_wants.clone())
                                     .expect("file read successfully")
                                     .expect("file type is known")
                                     .mime_type(),
-                                fs::metadata(file_wants).unwrap().len()
+                                    length
                             )
                             .as_bytes()
                             {
@@ -142,7 +180,14 @@ fn main() {
                                 buffer.push(*i);
                             }
                         }
-                        f.read_to_end(&mut buffer).expect("buffer overflow");
+                        if wants.starts_with("/videos/") && file_wants != "404.html" && range != (0,0) {
+                            let mut buffer_video = Vec::new();
+                            f.read_to_end(&mut buffer_video).expect("buffer overflow");
+                            buffer = [buffer, buffer_video[range.0..range.1].to_vec()].concat();
+                        }
+                        else {
+                            f.read_to_end(&mut buffer).expect("buffer overflow");
+                        }
                         stream.write(&buffer).unwrap();
                         stream.flush().unwrap();
                     }
