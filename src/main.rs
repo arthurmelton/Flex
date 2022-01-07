@@ -1,3 +1,5 @@
+use serde_json::Value;
+use std::net::TcpListener;
 use std::io::Write;
 use std::io::Read;
 use clap::*;
@@ -32,15 +34,85 @@ fn main() {
             }
         }
         if matches.is_present("add") {
-            let mut file = File::open(&[base_dirs.config_dir().to_str().unwrap(), "/flex/flex.json"].join("")).unwrap();
-            let mut data = String::new();
-            file.read_to_string(&mut data).unwrap();
             add_item_to_json(
                 input("What is the imdb url (ex https://www.imdb.com/title/tt10838180/)? : ").trim().to_string().replace("/", "").split("tt").last().expect("The url was not formated right").to_string(),
                 input("Where is the movie location on your computer : ").trim().to_string(),
                 [base_dirs.config_dir().to_str().unwrap(), "/flex/flex.json"].join("")
             );
             println!("Your movie was added!");
+        }
+        else {
+            let listener = TcpListener::bind("0.0.0.0:80").unwrap();
+            for stream in listener.incoming() {
+                thread::spawn(move || {
+                    let mut stream = stream.unwrap();
+                    let mut buffer = [0; 4096];
+                    stream.read(&mut buffer).unwrap();
+                    let response: String = String::from_utf8_lossy(&buffer).to_string();
+                    if response.split(' ').count() > 1 {
+                        let wants = response.split(' ').nth(1).unwrap();
+                        let file_wants = match wants {
+                            "/" => "index.html".to_string(),
+                            "/index.html" => "index.html".to_string(),
+                            "/style.css" => "style.css".to_string(),
+                            "/favicon.ico" => "favicon.ico".to_string(),
+                            "/main.js" => "main.js".to_string(),
+                            _ => {
+                                if let Some(base_dirs) = BaseDirs::new() {
+                                    let mut file = File::open(&[base_dirs.config_dir().to_str().unwrap(), "/flex/flex.json"].join("")).unwrap();
+                                    let mut data = String::new();
+                                    file.read_to_string(&mut data).unwrap();
+                                    let json:Value = serde_json::from_str(&data).unwrap();
+                                    if wants.contains("..") {
+                                        "404.html".to_string()
+                                    } else if json[wants[1..].to_string()] != Value::Null {
+                                        "video.html".to_string()
+                                    } else if wants.starts_with("/assets/")
+                                    {
+                                        format!(".{}", wants)
+                                    } else if wants.starts_with("/videos/") && json[wants[8..].to_string()] != Value::Null
+                                    {
+                                        format!("{}", json[wants[8..].to_string()].to_string().trim_matches('\"').to_string())
+                                    } else {
+                                        "404.html".to_string()
+                                    }
+                                }
+                                else {
+                                    "404.html".to_string()
+                                }
+                            }
+                        };
+                        println!("{} : {}", wants, file_wants);
+                        let mut f = File::open(file_wants.clone()).expect("no file found");
+                        let mut buffer = Vec::new();
+                        if file_wants.ends_with(".css") {
+                            for i in "HTTP/1.1 200 Ok\r\nContent-type: text/css; charset=utf-8\r\n\r\n"
+                                .as_bytes()
+                            {
+                                buffer.push(*i);
+                            }
+                        } else if file_wants.ends_with(".js") {
+                            for i in "HTTP/1.1 200 Ok\r\nContent-type: text/javascript; charset=utf-8\r\n\r\n".as_bytes() {
+                                buffer.push(*i);
+                            }
+                        } else if wants.starts_with("/videos/") && file_wants != "404.html" {
+                            for i in format!("HTTP/1.1 200 Ok\r\ncontent-type: {}\r\ncontent-length: {}\r\n\r\n", infer::get_from_path(file_wants.clone())
+                            .expect("file read successfully")
+                            .expect("file type is known").mime_type(), fs::metadata(file_wants).unwrap().len()).as_bytes() {
+                                buffer.push(*i);
+                            }
+                        } else {
+                            for i in "HTTP/1.1 200 Ok\r\n\r\n".as_bytes() {
+                                buffer.push(*i);
+                            }
+                        }
+                        f.read_to_end(&mut buffer).expect("buffer overflow");
+                        stream.write(&buffer).unwrap();
+                        stream.flush().unwrap();
+                    }
+                });
+            }
+            
         }
     }
 }
