@@ -7,8 +7,16 @@
     <title>Video</title>
 </head>
 <body>
-    <video src="videos/13669028" controls="controls">
+    <video id="video" src="videos/13669028" controls autoplay preload="auto">
         Your browser does not support our video ;_;
     </video>
+    <script>
+        video.addEventListener('loadedmetadata', function() {
+          if (video.buffered.length === 0) return;
+      
+          const bufferedSeconds = video.buffered.end(0) - video.buffered.start(0);
+          console.log(`${bufferedSeconds} seconds of video are ready to play.`);
+        });
+      </script>
 </body>
 </html>

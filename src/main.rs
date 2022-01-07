@@ -157,7 +157,12 @@ fn main() {
                             .try_into()
                             .unwrap();
                         if range != (0, 0) && range.1 == 0 {
-                            range = (range.0, file_length);
+                            if range.0 + 10485760 < file_length {
+                                range = (range.0, range.0 + 10485760);
+                            }
+                            else {
+                                range = (range.0, file_length);
+                            }
                         }
                         if file_wants.ends_with(".css") {
                             for i in
@@ -211,6 +216,7 @@ fn main() {
                             let mut buffer_video = Vec::new();
                             f.read_to_end(&mut buffer_video).expect("buffer overflow");
                             buffer = [buffer, buffer_video[range.0..range.1].to_vec()].concat();
+                            drop(buffer_video);
                         } else {
                             f.read_to_end(&mut buffer).expect("buffer overflow");
                         }
