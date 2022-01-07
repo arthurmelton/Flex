@@ -159,8 +159,7 @@ fn main() {
                         if range != (0, 0) && range.1 == 0 {
                             if range.0 + 10485760 < file_length {
                                 range = (range.0, range.0 + 10485760);
-                            }
-                            else {
+                            } else {
                                 range = (range.0, file_length);
                             }
                         }
