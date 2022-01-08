@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flex</title>
+    <link href="style.css" type="text/css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="text-gray-300">
+    <script src="main.js"></script>
+    <script>
+        $.get("config.json", function(data) {
+            for(var i in data) {
+                console.log(i);
+                $.get(`https://betterimdbot.herokuapp.com/?tt=tt${i}`, function(data) {
+                    console.log(data);
+                });
+
+                // <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg mt-4 overflow-clip cursor-pointer"><img class="h-80 w-max object-cover" src="https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg" alt="The Matrix"><p class="text-center mt-2">The Matrix</p></div>
+            }
+        });
+    </script>
+    <div id="navbar" class="absolute w-[98%] left-[1%] rounded-lg top-2 h-[6%] min-h-[50px] bg-gray-600">
+        <p class="absolute ml-4 m-auto vcenter text-yellow-300 cursor-pointer" onclick="location = '/';">
+            Flex
+        </p>
+        <div id="search" class="absolute ml-[61.4px] m-auto vcenter bg-gray-700 w-100 max-w-[800px] h-[70%] rounded-3xl overflow-clip">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="absolute vcenter width-10-4 cursor-pointer left-1" viewBox="0 0 16 16" onclick="search()">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+            </svg>
+            <input type="search_input" name="" id="" class="absolute bg-gray-700 vcenter width-90-12 right-2 outline-none" placeholder="Search result here">
+        </div>
+    </div>
+    <div class="bg-gray-700 w-screen h-screen">
+        <div id="body" class="absolute w-[98%] left-[1%]">
+            <div class="grid grid-flow-row rows-auto justify-items-center" id="grid">
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg mt-4 overflow-clip cursor-pointer"><img class="h-80 w-max object-cover" src="https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg" alt="The Matrix"><p class="text-center mt-2">The Matrix</p></div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg mt-4">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
