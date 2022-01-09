@@ -1,3 +1,4 @@
+use curl::easy::Easy;
 use std::io::SeekFrom;
 use std::io::Seek;
 use clap::*;
@@ -108,129 +109,155 @@ fn main() {
                     if response.split(' ').count() > 1 {
                         if let Some(base_dirs) = BaseDirs::new() {
                             let wants = response.split(' ').nth(1).unwrap();
-                            let file_wants = match wants {
-                                "/" => "index.html".to_string(),
-                                "/index.html" => "index.html".to_string(),
-                                "/style.css" => "style.css".to_string(),
-                                "/favicon.ico" => "favicon.ico".to_string(),
-                                "/main.js" => "main.js".to_string(),
-                                "/config.json" => [base_dirs.config_dir().to_str().unwrap(), "/flex/flex.json"].join(""),
-                                _ => {
-                                    let mut file = File::open(
-                                        &[
-                                            base_dirs.config_dir().to_str().unwrap(),
-                                            "/flex/flex.json",
-                                        ]
-                                        .join(""),
-                                    )
-                                    .unwrap();
-                                    let mut data = String::new();
-                                    file.read_to_string(&mut data).unwrap();
-                                    let json: Value = serde_json::from_str(&data).unwrap();
-                                    if wants.contains("..") {
-                                        "404.html".to_string()
-                                    } else if json[wants[1..].to_string()] != Value::Null {
-                                        "video.html".to_string()
-                                    } else if wants.starts_with("/assets/") {
-                                        format!(".{}", wants)
-                                    } else if wants.starts_with("/videos/")
-                                        && json[wants[8..].to_string()] != Value::Null
-                                    {
-                                        format!(
-                                            "{}",
-                                            json[wants[8..].to_string()]
-                                                .to_string()
-                                                .trim_matches('\"')
-                                                .to_string()
-                                        )
-                                    } else {
-                                        "404.html".to_string()
-                                    }
-                                }
-                            };
-                            println!("{} : {}", response, file_wants);
-                            let mut f = File::open(file_wants.clone()).expect("no file found");
-                            let mut buffer = Vec::new();
-                            let file_length: usize = fs::metadata(file_wants.clone())
-                                .unwrap()
-                                .len()
-                                .try_into()
-                                .unwrap();
-                            if range != (0, 0) && range.1 == 0 {
-                                if range.0 + 10485760 < file_length {
-                                    range = (range.0, range.0 + 10485760);
-                                } else {
-                                    range = (range.0, file_length);
-                                }
-                            }
-                            if file_wants.ends_with(".css") {
-                                for i in
-                                    "HTTP/1.1 200 Ok\r\nContent-type: text/css; charset=utf-8\r\n\r\n"
-                                        .as_bytes()
-                                {
-                                    buffer.push(*i);
-                                }
-                            } else if file_wants.ends_with(".js") {
-                                for i in "HTTP/1.1 200 Ok\r\nContent-type: text/javascript; charset=utf-8\r\n\r\n".as_bytes() {
-                                    buffer.push(*i);
-                                }
-                            } else if file_wants.ends_with(".json") {
-                                for i in "HTTP/1.1 200 Ok\r\nContent-type: application/json; charset=utf-8\r\n\r\n".as_bytes() {
-                                    buffer.push(*i);
-                                }
-                            } else if wants.starts_with("/videos/") && file_wants != "404.html" {
-                                let length = if range != (0, 0) {
-                                    range.1 - range.0
-                                } else {
-                                    file_length
-                                };
-                                let code = if range != (0, 0) { 206 } else { 200 };
-                                let content_rang = if range != (0, 0) {
-                                    format!(
-                                        "\r\nContent-Range: bytes {}-{}/{}",
-                                        range.0, range.1, file_length
-                                    )
-                                } else {
-                                    "".to_string()
-                                };
-                                for i in format!(
-                                    "HTTP/1.1 {} Ok{}\r\nContent-Type: {}\r\nAccept-Ranges: bytes\r\nContent-Length: {}\r\n\r\n",
-                                    code,
-                                    content_rang,
-                                    infer::get_from_path(file_wants.clone())
-                                        .expect("file read successfully")
-                                        .expect("file type is known")
-                                        .mime_type(),
-                                        length
-                                )
-                                .as_bytes()
-                                {
-                                    buffer.push(*i);
-                                }
-                            } else {
+                            if wants.starts_with("/lookup") {
+                                let mut buffer = Vec::new();
                                 for i in "HTTP/1.1 200 Ok\r\n\r\n".as_bytes() {
                                     buffer.push(*i);
                                 }
+                                let mut dst = Vec::new();
+                                let mut easy = Easy::new();
+                                easy.url(format!("https://betterimdbot.herokuapp.com/?tt=tt{}", &wants[8..]).as_str()).unwrap();
+                                let _output = easy.custom_request("GET");
+                                let mut transfer = easy.transfer();
+                                transfer
+                                    .write_function(|data| {
+                                        dst.extend_from_slice(data);
+                                        Ok(data.len())
+                                    })
+                                    .unwrap();
+                                transfer.perform().unwrap();
+                                drop(transfer);
+                                for i in dst {
+                                    buffer.push(i);
+                                }
+                                stream.write(&buffer).unwrap();
+                                stream.flush().unwrap();
                             }
-                            if wants.starts_with("/videos/")
-                                && file_wants != "404.html"
-                                && range != (0, 0)
-                            {
-                                f.seek(SeekFrom::Start(range.0 as u64)).unwrap();
-                                let mut handle = f.take((range.1-range.0) as u64);
-                                handle.read_to_end(&mut buffer).expect("buffer overflow");
-                            } else {
-                                f.read_to_end(&mut buffer).expect("buffer overflow");
-                            }
-                            if file_wants == "video.html" {
-                                buffer = String::from_utf8(buffer)
+                            else {
+                                let file_wants = match wants {
+                                    "/" => "index.html".to_string(),
+                                    "/index.html" => "index.html".to_string(),
+                                    "/style.css" => "style.css".to_string(),
+                                    "/favicon.ico" => "favicon.ico".to_string(),
+                                    "/main.js" => "main.js".to_string(),
+                                    "/config.json" => [base_dirs.config_dir().to_str().unwrap(), "/flex/flex.json"].join(""),
+                                    _ => {
+                                        let mut file = File::open(
+                                            &[
+                                                base_dirs.config_dir().to_str().unwrap(),
+                                                "/flex/flex.json",
+                                            ]
+                                            .join(""),
+                                        )
+                                        .unwrap();
+                                        let mut data = String::new();
+                                        file.read_to_string(&mut data).unwrap();
+                                        let json: Value = serde_json::from_str(&data).unwrap();
+                                        if wants.contains("..") {
+                                            "404.html".to_string()
+                                        } else if json[wants[1..].to_string()] != Value::Null {
+                                            "video.html".to_string()
+                                        } else if wants.starts_with("/assets/") {
+                                            format!(".{}", wants)
+                                        } else if wants.starts_with("/videos/")
+                                            && json[wants[8..].to_string()] != Value::Null
+                                        {
+                                            format!(
+                                                "{}",
+                                                json[wants[8..].to_string()]
+                                                    .to_string()
+                                                    .trim_matches('\"')
+                                                    .to_string()
+                                            )
+                                        } else {
+                                            "404.html".to_string()
+                                        }
+                                    }
+                                };
+                                println!("{} : {}", response, file_wants);
+                                let mut f = File::open(file_wants.clone()).expect("no file found");
+                                let mut buffer = Vec::new();
+                                let file_length: usize = fs::metadata(file_wants.clone())
                                     .unwrap()
-                                    .replace("$video_id", &wants[1..])
+                                    .len()
+                                    .try_into()
+                                    .unwrap();
+                                if range != (0, 0) && range.1 == 0 {
+                                    if range.0 + 10485760 < file_length {
+                                        range = (range.0, range.0 + 10485760);
+                                    } else {
+                                        range = (range.0, file_length);
+                                    }
+                                }
+                                if file_wants.ends_with(".css") {
+                                    for i in
+                                        "HTTP/1.1 200 Ok\r\nContent-type: text/css; charset=utf-8\r\n\r\n"
+                                            .as_bytes()
+                                    {
+                                        buffer.push(*i);
+                                    }
+                                } else if file_wants.ends_with(".js") {
+                                    for i in "HTTP/1.1 200 Ok\r\nContent-type: text/javascript; charset=utf-8\r\n\r\n".as_bytes() {
+                                        buffer.push(*i);
+                                    }
+                                } else if file_wants.ends_with(".json") {
+                                    for i in "HTTP/1.1 200 Ok\r\nContent-type: application/json; charset=utf-8\r\n\r\n".as_bytes() {
+                                        buffer.push(*i);
+                                    }
+                                } else if wants.starts_with("/videos/") && file_wants != "404.html" {
+                                    let length = if range != (0, 0) {
+                                        range.1 - range.0
+                                    } else {
+                                        file_length
+                                    };
+                                    let code = if range != (0, 0) { 206 } else { 200 };
+                                    let content_rang = if range != (0, 0) {
+                                        format!(
+                                            "\r\nContent-Range: bytes {}-{}/{}",
+                                            range.0, range.1, file_length
+                                        )
+                                    } else {
+                                        "".to_string()
+                                    };
+                                    for i in format!(
+                                        "HTTP/1.1 {} Ok{}\r\nContent-Type: {}\r\nAccept-Ranges: bytes\r\nContent-Length: {}\r\n\r\n",
+                                        code,
+                                        content_rang,
+                                        infer::get_from_path(file_wants.clone())
+                                            .expect("file read successfully")
+                                            .expect("file type is known")
+                                            .mime_type(),
+                                            length
+                                    )
                                     .as_bytes()
-                                    .to_vec();
+                                    {
+                                        buffer.push(*i);
+                                    }
+                                } else {
+                                    for i in "HTTP/1.1 200 Ok\r\n\r\n".as_bytes() {
+                                        buffer.push(*i);
+                                    }
+                                }
+                                if wants.starts_with("/videos/")
+                                    && file_wants != "404.html"
+                                    && range != (0, 0)
+                                {
+                                    f.seek(SeekFrom::Start(range.0 as u64)).unwrap();
+                                    let mut handle = f.take((range.1-range.0) as u64);
+                                    handle.read_to_end(&mut buffer).expect("buffer overflow");
+                                } else {
+                                    f.read_to_end(&mut buffer).expect("buffer overflow");
+                                }
+                                if file_wants == "video.html" {
+                                    buffer = String::from_utf8(buffer)
+                                        .unwrap()
+                                        .replace("$video_id", &wants[1..])
+                                        .as_bytes()
+                                        .to_vec();
+                                }
+                                stream.write(&buffer).unwrap();
+                                stream.flush().unwrap();
                             }
-                            stream.write(&buffer).unwrap();
-                            stream.flush().unwrap();
                         }
                     }
                 });

@@ -7,18 +7,17 @@
     <title>Flex</title>
     <link href="style.css" type="text/css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://spin.js.org/spin.js"></script>
 </head>
 <body class="text-gray-300">
     <script src="main.js"></script>
     <script>
         $.get("config.json", function(data) {
             for(var i in data) {
-                console.log(i);
-                $.get(`https://betterimdbot.herokuapp.com/?tt=tt${i}`, function(data) {
-                    console.log(data);
-                });
-
-                // <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg mt-4 overflow-clip cursor-pointer"><img class="h-80 w-max object-cover" src="https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg" alt="The Matrix"><p class="text-center mt-2">The Matrix</p></div>
+                $.get(`lookup/${i}`, function(data) {
+                    var data = JSON.parse(data);
+                    $("#grid").html($("#grid").html()+`<div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg mt-4 overflow-clip cursor-pointer" onclick="open(${data.tt_url.split("title/tt")[1]})"><img class="h-80 w-full object-cover" src="${data.poster}" alt="${data.title}"><p class="text-center mt-2">${data.title}</p></div>`);
+                })
             }
         });
     </script>
@@ -36,17 +35,6 @@
     <div class="bg-gray-700 w-screen h-screen">
         <div id="body" class="absolute w-[98%] left-[1%]">
             <div class="grid grid-flow-row rows-auto justify-items-center" id="grid">
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg mt-4 overflow-clip cursor-pointer"><img class="h-80 w-max object-cover" src="https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_.jpg" alt="The Matrix"><p class="text-center mt-2">The Matrix</p></div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg mt-4">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
-                <div class="w-64 h-min-[75%] h-96 bg-gray-600 rounded-lg">01</div>
             </div>
         </div>
     </div>
