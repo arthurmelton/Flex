@@ -1,11 +1,11 @@
-use curl::easy::Easy;
-use std::io::SeekFrom;
-use std::io::Seek;
 use clap::*;
+use curl::easy::Easy;
 use directories::BaseDirs;
 use serde_json::Value;
 use std::fs::File;
 use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
 use std::io::Write;
 use std::net::TcpListener;
 use std::path::Path;
@@ -116,7 +116,14 @@ fn main() {
                                 }
                                 let mut dst = Vec::new();
                                 let mut easy = Easy::new();
-                                easy.url(format!("https://betterimdbot.herokuapp.com/?tt=tt{}", &wants[8..]).as_str()).unwrap();
+                                easy.url(
+                                    format!(
+                                        "https://betterimdbot.herokuapp.com/?tt=tt{}",
+                                        &wants[8..]
+                                    )
+                                    .as_str(),
+                                )
+                                .unwrap();
                                 let _output = easy.custom_request("GET");
                                 let mut transfer = easy.transfer();
                                 transfer
@@ -132,15 +139,18 @@ fn main() {
                                 }
                                 stream.write(&buffer).unwrap();
                                 stream.flush().unwrap();
-                            }
-                            else {
+                            } else {
                                 let file_wants = match wants {
                                     "/" => "index.html".to_string(),
                                     "/index.html" => "index.html".to_string(),
                                     "/style.css" => "style.css".to_string(),
                                     "/favicon.ico" => "favicon.ico".to_string(),
                                     "/main.js" => "main.js".to_string(),
-                                    "/config.json" => [base_dirs.config_dir().to_str().unwrap(), "/flex/flex.json"].join(""),
+                                    "/config.json" => [
+                                        base_dirs.config_dir().to_str().unwrap(),
+                                        "/flex/flex.json",
+                                    ]
+                                    .join(""),
                                     _ => {
                                         let mut file = File::open(
                                             &[
@@ -204,7 +214,8 @@ fn main() {
                                     for i in "HTTP/1.1 200 Ok\r\nContent-type: application/json; charset=utf-8\r\n\r\n".as_bytes() {
                                         buffer.push(*i);
                                     }
-                                } else if wants.starts_with("/videos/") && file_wants != "404.html" {
+                                } else if wants.starts_with("/videos/") && file_wants != "404.html"
+                                {
                                     let length = if range != (0, 0) {
                                         range.1 - range.0
                                     } else {
@@ -243,7 +254,7 @@ fn main() {
                                     && range != (0, 0)
                                 {
                                     f.seek(SeekFrom::Start(range.0 as u64)).unwrap();
-                                    let mut handle = f.take((range.1-range.0) as u64);
+                                    let mut handle = f.take((range.1 - range.0) as u64);
                                     handle.read_to_end(&mut buffer).expect("buffer overflow");
                                 } else {
                                     f.read_to_end(&mut buffer).expect("buffer overflow");
