@@ -39,7 +39,7 @@ fn main() {
             }
             if let Err(why) = write_file(
                 [base_dirs.config_dir().to_str().unwrap(), "/flex/flex.json"].join(""),
-                "{\n}".to_string(),
+                "[]".to_string(),
             ) {
                 make_error("Error writing to flex config: ", why);
             }
@@ -69,7 +69,8 @@ fn main() {
                     stream.read(&mut buffer).unwrap();
                     let response: String = String::from_utf8_lossy(&buffer).to_string();
                     let mut range: (usize, usize) = (0, 0);
-                    for i in response.to_lowercase().lines() {
+                    let mut user_agent:String = "".to_string();
+                    for i in response.clone().to_lowercase().lines() {
                         if i.starts_with("range: ") {
                             println!("{}", i);
                             if i.split("-").last().unwrap().len() > 0 {
@@ -104,9 +105,11 @@ fn main() {
                                     0,
                                 );
                             }
+                        }else if i.starts_with("user-agent: ") {
+                            user_agent = i[12..].to_string();
                         }
                     }
-                    if response.split(' ').count() > 1 {
+                    if response.clone().split(' ').count() > 1 {
                         if let Some(base_dirs) = BaseDirs::new() {
                             let wants = response.split(' ').nth(1).unwrap();
                             if wants.starts_with("/lookup") {
@@ -193,11 +196,14 @@ fn main() {
                                     .try_into()
                                     .unwrap();
                                 if range != (0, 0) && range.1 == 0 {
-                                    if range.0 + 10485760 < file_length {
-                                        range = (range.0, range.0 + 10485760);
+                                    if range.0 + 157286400 < file_length {
+                                        range = (range.0, range.0 + 157286400);
                                     } else {
                                         range = (range.0, file_length);
                                     }
+                                }
+                                else {
+                                    range = (0,157286400);
                                 }
                                 if file_wants.ends_with(".css") {
                                     for i in
